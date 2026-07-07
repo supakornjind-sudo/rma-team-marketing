@@ -480,9 +480,10 @@ function renderReview() {
       ' · ผ่าน KPI ' + g.items.filter(t => t.kpi === 'ผ่าน').length,
       pastTable(g.items.sort((a, b) => effDate(b).localeCompare(effDate(a))), true))).join('');
   }
-  if (fsec === 'plan') {
+  if (!fsec || fsec === 'plan') {
     const groups = groupBy(plan, t => monthKey(t.month), monthLabel);
-    html += groups.map(g => collapsible(g.label + ' (แผนงาน)', g.items.length, '', planTable(g.items))).join('');
+    html += groups.map(g => collapsible(g.label + ' (แผนงานเดือน)', g.items.length,
+      ' · เสร็จสิ้น ' + g.items.filter(t => t.planStatus === 'เสร็จสิ้น').length, planTable(g.items))).join('');
   }
   document.getElementById('reviewGroups').innerHTML = html || '<div class="card" style="text-align:center;color:#7a8aa0;">ไม่พบงานตามเงื่อนไข</div>';
 }
