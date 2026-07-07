@@ -25,7 +25,7 @@ const prodOf      = mid => S.prodTasks.filter(t => t.memberId === mid);
 const isPlanDone  = t => t.section === 'plan' && t.planStatus === 'เสร็จสิ้น';
 const effDate     = t => t.section === 'past' ? t.date : (isPlanDone(t) && t.postDate ? t.postDate : '');
 const pastVisible = t => !!effDate(t);
-const effMonth    = t => t.section === 'past' ? monthKey(t.date) : t.month;
+const effMonth    = t => t.section === 'past' ? monthKey(t.date) : monthKey(t.month);   // normalize กันเดือนซ้ำ
 
 /* Dropdown: อ่านจากชีต DropdownSettings */
 function ddValues(cat) { return S.dropdowns.filter(d => d.category === cat).map(d => d.value); }
@@ -400,7 +400,7 @@ function renderPerson() {
 
   const weekGroups = groupBy(past, t => weekKey(effDate(t)), weekLabel,
     (a, b) => effDate(b).localeCompare(effDate(a)));
-  const monthGroups = groupBy(plan, t => t.month || '', monthLabel);
+  const monthGroups = groupBy(plan, t => monthKey(t.month), monthLabel);
   secEl.innerHTML = `
     <div class="sec-block">
       <div class="sec-head sec-past"><h3>📈 1. ผลงานที่ลงไปแล้ว</h3>
@@ -481,7 +481,7 @@ function renderReview() {
       pastTable(g.items.sort((a, b) => effDate(b).localeCompare(effDate(a))), true))).join('');
   }
   if (fsec === 'plan') {
-    const groups = groupBy(plan, t => t.month || '', monthLabel);
+    const groups = groupBy(plan, t => monthKey(t.month), monthLabel);
     html += groups.map(g => collapsible(g.label + ' (แผนงาน)', g.items.length, '', planTable(g.items))).join('');
   }
   document.getElementById('reviewGroups').innerHTML = html || '<div class="card" style="text-align:center;color:#7a8aa0;">ไม่พบงานตามเงื่อนไข</div>';
