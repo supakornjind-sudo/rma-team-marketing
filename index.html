@@ -18,6 +18,7 @@
   <button class="nav-btn" data-view="dashboard" onclick="showView('dashboard')">📊 Dashboard</button>
   <button class="nav-btn" data-view="review" onclick="showView('review')">🔍 ตรวจงาน</button>
   <button class="nav-btn" data-view="projects" onclick="showView('projects')">🏗️ โปรเจกต์</button>
+  <button class="nav-btn" data-view="calendar" onclick="showView('calendar')">📅 ปฏิทิน</button>
   <select id="personJump" onchange="if(this.value)openPerson(this.value)" style="border-radius:20px;">
     <option value="">📋 ตารางงานรายคน...</option>
   </select>
@@ -121,6 +122,9 @@
   </div>
   <div id="projGroups"></div>
 </div>
+
+<!-- ===== CALENDAR (หน้าใหม่ — ไม่แตะระบบเดิม) ===== -->
+<div class="view" id="view-calendar"><div id="calBody"></div></div>
 
 <!-- ===== PERSON ===== -->
 <div class="view" id="view-person">
@@ -277,6 +281,23 @@
     <button class="btn gray" onclick="closeM('xModal')">ยกเลิก</button>
     <button class="btn blue" onclick="doExport('csv')">⬇️ CSV</button>
     <button class="btn" onclick="doExport('excel')">⬇️ Excel</button>
+  </div>
+</div></div>
+
+<!-- ===== CALENDAR MODAL ===== -->
+<div class="modal-bg" id="kModal"><div class="modal" style="max-width:460px;">
+  <h3 id="kTitleHead">➕ เพิ่มกิจกรรม/วันสำคัญ</h3>
+  <div class="form-grid" style="margin-top:10px;">
+    <div class="full"><label>ชื่อกิจกรรม / วันสำคัญ</label><input type="text" id="kTitle" placeholder="เช่น ออกบูธ Central Westgate / วันแม่"></div>
+    <div><label>วันที่เริ่ม</label><input type="date" id="kStart"></div>
+    <div><label>ถึงวันที่</label><input type="date" id="kEnd"></div>
+    <div class="full"><label>สี</label><div id="kSwatches" class="chips"></div></div>
+    <div class="full"><label>โน้ต / ต้องลงงานอะไรบ้าง</label><input type="text" id="kNote" placeholder="เช่น เตรียม Ads ล่วงหน้า 7 วัน + Live วันแรก"></div>
+  </div>
+  <div class="modal-actions">
+    <button class="btn red" id="kDelBtn" onclick="delCal()">🗑️ ลบ</button>
+    <button class="btn gray" onclick="closeM('kModal')">ยกเลิก</button>
+    <button class="btn" onclick="saveCal()">💾 บันทึก</button>
   </div>
 </div></div>
 

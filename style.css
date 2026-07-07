@@ -276,3 +276,23 @@ select, input[type=text], input[type=date], input[type=month], input[type=number
   .stat { min-width:100px; }
   .who-box span { display:none; }
 }
+
+/* ===== CALENDAR (หน้าใหม่) ===== */
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-head { margin:10px 0 4px; }
+.cal-head div { text-align:center; font-size:12px; font-weight:700; color:#5a6b80; padding:4px 0; }
+.cal-cell { background:#f7fafc; border:1px solid #e6ecf3; border-radius:8px; min-height:86px; padding:4px; cursor:pointer; overflow:hidden; transition:.12s; }
+.cal-cell:hover { border-color:#4caf7d; background:#f0f7f3; }
+.cal-out { opacity:.4; }
+.cal-today { border:2px solid #e0641f; background:#fff7f0; }
+.cal-num { font-size:11.5px; font-weight:700; color:#5a6b80; margin-bottom:2px; }
+.cal-today .cal-num { color:#e0641f; }
+.cal-ev { color:#fff; font-size:10.5px; border-radius:4px; padding:1.5px 5px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+.cal-ev:hover { filter:brightness(1.15); }
+.cal-more { font-size:10px; color:#7a8aa0; }
+.cal-up { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:7px 4px; border-bottom:1px solid #f0f4f8; font-size:13px; cursor:pointer; }
+.cal-up:hover { background:#f7fafc; }
+.cal-dot { width:10px; height:10px; border-radius:3px; flex-shrink:0; }
+.cal-swatch { width:26px; height:26px; border-radius:6px; cursor:pointer; display:inline-block; border:3px solid transparent; }
+.cal-swatch.on { border-color:#1e3a5f; }
+@media (max-width:640px) { .cal-cell { min-height:60px; } .cal-ev { font-size:9px; } }

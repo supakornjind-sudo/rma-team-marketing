@@ -7,7 +7,7 @@
 /* ================= STATE ================= */
 const S = {
   settings: [], members: [], tasks: [], prodTasks: [], links: [], images: [], attachments: [],
-  brands: [], dropdowns: [], projects: [], projGroups: [], projItems: [], trash: [],
+  brands: [], dropdowns: [], projects: [], projGroups: [], projItems: [], trash: [], calendar: [],
 };
 const COLORS = ['#e63e6d','#3f7fd9','#4caf7d','#e67e22','#9b59b6','#16a2b8','#c0392b','#5e7d2a','#d4a017','#7f8c8d'];
 const HAIRS  = ['#3b2a1d','#111','#5a3b22','#222','#6d4c2f','#3b2a1d','#111','#5a3b22','#6d4c2f','#222'];
@@ -89,6 +89,7 @@ function showView(v) {
   if (v === 'review') renderReview();
   if (v === 'projects') renderProjects();
   if (v === 'trash') renderTrash();
+  if (v === 'calendar') renderCalendar();
   if (v === 'office') document.getElementById('personJump').value = '';
 }
 function openPerson(id) {
@@ -111,6 +112,7 @@ function renderAll() {
     if (act.id === 'view-projects') renderProjects();
     if (act.id === 'view-person') renderPerson();
     if (act.id === 'view-trash') renderTrash();
+    if (act.id === 'view-calendar') renderCalendar();
   }
 }
 
@@ -348,7 +350,7 @@ function projTable(items) {
 }
 
 /* ================= PERSON VIEW ================= */
-const filters = { person: { brand: '' }, review: { brand: '', mode: 'week', cat: '' }, proj: { sel: '' }, dash: { tab: 'overview' } };
+const filters = { person: { brand: '' }, review: { brand: '', mode: 'week', cat: '' }, proj: { sel: '' }, dash: { tab: 'overview' }, cal: { ym: '' } };
 
 function brandChips(cid, fkey, onPick) {
   const cur = filters[fkey].brand;
@@ -940,7 +942,7 @@ function planStChanged() {
 function openM(id) { document.getElementById(id).classList.add('open'); }
 function closeM(id) { document.getElementById(id).classList.remove('open'); }
 document.addEventListener('DOMContentLoaded', () => {
-  ['cModal','pModal','jModal','aModal','xModal','vModal','hModal'].forEach(id =>
+  ['cModal','pModal','jModal','aModal','xModal','vModal','hModal','kModal'].forEach(id =>
     document.getElementById(id).addEventListener('click', e => { if (e.target.id === id) closeM(id); }));
 });
 
@@ -1162,7 +1164,7 @@ async function restoreVer(versionId) {
 
 /* ================= TRASH / RECYCLE BIN (ข้อ 19) ================= */
 const TRASH_LABEL = { tasks: 'งานคอนเทนต์', prodTasks: 'งานผลิต', projItems: 'เช็คลิสต์', projGroups: 'หมวด/Phase',
-  projects: 'โปรเจกต์', members: 'สมาชิก', brands: 'แบรนด์', dropdowns: 'Dropdown', links: 'ลิงก์', images: 'รูป', attachments: 'ไฟล์แนบ' };
+  projects: 'โปรเจกต์', members: 'สมาชิก', brands: 'แบรนด์', dropdowns: 'Dropdown', links: 'ลิงก์', images: 'รูป', attachments: 'ไฟล์แนบ', calendar: 'ปฏิทิน' };
 function renderTrash() {
   const list = S.trash.slice().sort((a, b) => (b.deletedAt || '').localeCompare(a.deletedAt || ''));
   document.getElementById('trashList').innerHTML = list.length
@@ -1232,4 +1234,113 @@ function doExport(fmt) {
   }
   closeM('xModal');
   toast('ดาวน์โหลด ' + (fmt === 'csv' ? 'CSV' : 'Excel') + ' แล้ว ✓ (ข้อมูลเดิมไม่ถูกกระทบ)', 'success');
+}
+
+/* ================= CALENDAR (หน้าปฏิทินทีม — เพิ่มใหม่ ไม่แตะระบบเดิม) ================= */
+const CAL_COLORS = ['#e0641f', '#2c5d9e', '#1c7c47', '#9b59b6', '#c0392b', '#a07b12'];
+let calEditId = null;
+window.kColor = CAL_COLORS[0];
+
+function calYM() {
+  if (!filters.cal.ym) {
+    const n = new Date();
+    filters.cal.ym = `${n.getFullYear()}-${pad2(n.getMonth() + 1)}`;
+  }
+  return filters.cal.ym;
+}
+function calShift(n) {
+  const p = calYM().split('-').map(Number);
+  const d = new Date(p[0], p[1] - 1 + n, 1);
+  filters.cal.ym = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  renderCalendar();
+}
+function eventsOn(iso) {
+  return S.calendar.filter(e => (e.start || '') <= iso && iso <= ((e.end || e.start) || ''));
+}
+function renderCalendar() {
+  const ym = calYM();
+  const p = ym.split('-').map(Number);
+  const first = new Date(p[0], p[1] - 1, 1);
+  const off = (first.getDay() + 6) % 7;
+  const n = new Date();
+  const todayISO = `${n.getFullYear()}-${pad2(n.getMonth() + 1)}-${pad2(n.getDate())}`;
+  let cells = '';
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(p[0], p[1] - 1, 1 - off + i);
+    const iso = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const inMonth = d.getMonth() === p[1] - 1;
+    const evs = eventsOn(iso);
+    cells += `<div class="cal-cell ${inMonth ? '' : 'cal-out'} ${iso === todayISO ? 'cal-today' : ''}" onclick="openCalModal(null,'${iso}')">
+      <div class="cal-num">${d.getDate()}</div>
+      ${evs.slice(0, 3).map(e => `<div class="cal-ev" style="background:${esc(e.color || CAL_COLORS[0])}" onclick="event.stopPropagation();openCalModal('${e.id}')" title="${esc(e.title)}${e.note ? ' — ' + esc(e.note) : ''}">${esc(e.title)}</div>`).join('')}
+      ${evs.length > 3 ? `<div class="cal-more">+${evs.length - 3} เพิ่มเติม</div>` : ''}
+    </div>`;
+  }
+  const up = S.calendar.filter(e => ((e.end || e.start) || '') >= todayISO)
+    .sort((a, b) => (a.start || '').localeCompare(b.start || '')).slice(0, 12);
+  document.getElementById('calBody').innerHTML = `
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn small gray" onclick="calShift(-1)">◀</button>
+        <strong style="color:#1e3a5f;font-size:16px;min-width:170px;text-align:center;">📅 ${monthLabel(ym)}</strong>
+        <button class="btn small gray" onclick="calShift(1)">▶</button>
+        <button class="btn small blue" onclick="filters.cal.ym='';renderCalendar()">วันนี้</button>
+        <span style="color:#7a8aa0;font-size:12px;">คลิกวันในปฏิทินเพื่อเพิ่มกิจกรรมวันนั้น · คลิกแถบสีเพื่อดู/แก้ไข</span>
+        <button class="btn small" style="margin-left:auto;" onclick="openCalModal()">➕ เพิ่มกิจกรรม/วันสำคัญ</button>
+      </div>
+      <div class="cal-grid cal-head"><div>จ.</div><div>อ.</div><div>พ.</div><div>พฤ.</div><div>ศ.</div><div>ส.</div><div>อา.</div></div>
+      <div class="cal-grid">${cells}</div>
+    </div>
+    <div class="card"><strong style="color:#1e3a5f;">📌 กิจกรรมที่กำลังจะถึง</strong>
+      ${up.length ? up.map(e => `<div class="cal-up" onclick="openCalModal('${e.id}')">
+        <span class="cal-dot" style="background:${esc(e.color || CAL_COLORS[0])}"></span>
+        <strong>${esc(e.title)}</strong>
+        <span style="color:#7a8aa0;">${fmtDate(e.start)}${e.end && e.end !== e.start ? ' – ' + fmtDate(e.end) : ''}</span>
+        ${e.note ? `<span style="color:#8fa1b5;font-size:12px;">📝 ${esc(e.note)}</span>` : ''}
+        <span style="margin-left:auto;color:#c3cfdc;font-size:11px;">โดย ${esc(e.createdBy || '')}</span>
+      </div>`).join('') : '<div style="color:#7a8aa0;font-size:13px;margin-top:8px;">ยังไม่มีกิจกรรม — กด ➕ เพิ่มได้เลย ทุกคนในทีมจะเห็นเหมือนกัน</div>'}
+    </div>`;
+}
+function openCalModal(id, dateISO) {
+  calEditId = id || null;
+  const e = id ? S.calendar.find(x => x.id === id) : null;
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('kTitle').value = e ? e.title : '';
+  document.getElementById('kStart').value = e ? e.start : (dateISO || today);
+  document.getElementById('kEnd').value = e ? (e.end || e.start) : (dateISO || today);
+  document.getElementById('kNote').value = e ? (e.note || '') : '';
+  window.kColor = e ? (e.color || CAL_COLORS[0]) : CAL_COLORS[0];
+  renderKSwatches();
+  document.getElementById('kDelBtn').style.display = id ? '' : 'none';
+  document.getElementById('kTitleHead').textContent = id ? '✏️ แก้ไขกิจกรรม' : '➕ เพิ่มกิจกรรม/วันสำคัญ';
+  openM('kModal');
+}
+function renderKSwatches() {
+  document.getElementById('kSwatches').innerHTML = CAL_COLORS.map(c =>
+    `<span class="cal-swatch ${window.kColor === c ? 'on' : ''}" style="background:${c}" onclick="window.kColor='${c}';renderKSwatches()"></span>`).join('');
+}
+async function saveCal() {
+  const title = document.getElementById('kTitle').value.trim();
+  if (!title) { toast('กรุณาใส่ชื่อกิจกรรม', 'error'); return; }
+  let start = document.getElementById('kStart').value;
+  let end = document.getElementById('kEnd').value || start;
+  if (!start) { toast('กรุณาเลือกวันที่เริ่ม', 'error'); return; }
+  if (end < start) { const t = start; start = end; end = t; }   // สลับให้อัตโนมัติ
+  const row = { title: title, start: start, end: end, color: window.kColor, note: document.getElementById('kNote').value.trim() };
+  try {
+    if (calEditId) await API.update('calendar', calEditId, row);
+    else await API.create('calendar', row);
+    closeM('kModal');
+    toast('บันทึกกิจกรรมแล้ว ✓ ทุกคนในทีมเห็นทันที', 'success');
+    await refresh();
+  } catch (e) { toast('บันทึกไม่สำเร็จ: ' + e.message, 'error', 4500); }
+}
+async function delCal() {
+  if (!calEditId || !confirm('ลบกิจกรรมนี้? (จะย้ายไปถังขยะ กู้คืนได้)')) return;
+  try {
+    await API.remove('calendar', calEditId);
+    closeM('kModal');
+    toast('ลบแล้ว (อยู่ในถังขยะ) ✓', 'success');
+    await refresh();
+  } catch (e) { toast(e.message, 'error'); }
 }
