@@ -402,7 +402,7 @@ function renderPerson() {
 
   const weekGroups = groupBy(past, t => weekKey(effDate(t)), weekLabel,
     (a, b) => effDate(b).localeCompare(effDate(a)));
-  const monthGroups = groupBy(plan, t => monthKey(t.month), monthLabel);
+  const monthGroups = groupBy(plan, t => monthKey(t.month) || 'none', k => k === 'none' ? '⚠️ ไม่ระบุเดือน — กด ✏️ แก้ไขแล้วใส่เดือน' : monthLabel(k));
   secEl.innerHTML = `
     <div class="sec-block">
       <div class="sec-head sec-past"><h3>📈 1. ผลงานที่ลงไปแล้ว</h3>
@@ -483,7 +483,7 @@ function renderReview() {
       pastTable(g.items.sort((a, b) => effDate(b).localeCompare(effDate(a))), true))).join('');
   }
   if (!fsec || fsec === 'plan') {
-    const groups = groupBy(plan, t => monthKey(t.month), monthLabel);
+    const groups = groupBy(plan, t => monthKey(t.month) || 'none', k => k === 'none' ? '⚠️ ไม่ระบุเดือน — กด ✏️ แก้ไขแล้วใส่เดือน' : monthLabel(k));
     html += groups.map(g => collapsible(g.label + ' (แผนงานเดือน)', g.items.length,
       ' · เสร็จสิ้น ' + g.items.filter(t => t.planStatus === 'เสร็จสิ้น').length, planTable(g.items))).join('');
   }
@@ -831,6 +831,13 @@ async function deleteMember(id) {
 /* ================= EDIT / SAVE / DELETE / DUPLICATE ================= */
 let editKind = 'c', editId = null, editCtx = null, pendingImgs = [], editLinks = [];
 
+/* ลำดับแผนถัดไปของคนนั้นในเดือนนั้น (รันเลขอัตโนมัติ) */
+function nextPlanOrder(memberId, ym) {
+  const nums = S.tasks.filter(t => t.section === 'plan' && t.memberId === memberId && monthKey(t.month) === ym)
+    .map(t => +t.planOrder || 0);
+  return (nums.length ? Math.max.apply(null, nums) : 0) + 1;
+}
+
 function findAny(kind, id) {
   if (kind === 'c') return S.tasks.find(t => t.id === id);
   if (kind === 'p') return S.prodTasks.find(t => t.id === id);
@@ -889,7 +896,7 @@ function edit(kind, id, ctx, section) {
       if (ctx) sel.value = ctx;
       cDate.value = new Date().toISOString().slice(0, 10);
       cMonth.value = new Date().toISOString().slice(0, 7);
-      cOrder.value = ''; cDue.value = ''; cPostDate.value = '';
+      cOrder.value = (section === 'plan') ? nextPlanOrder(sel.value, cMonth.value) : ''; cDue.value = ''; cPostDate.value = '';
       cTopic.value = ''; cPages.value = ''; cKpi.value = 'รอผล'; cNote.value = '';
     }
     renderLinkRows(); cSecFields(); renderThumbs('cThumbs', 'task', id); renderFiles('cFiles', 'task', id); openM('cModal');
@@ -979,6 +986,12 @@ function scheduleAutoSave() {
 }
 async function doAutoSave() {
   if (!editId || !document.getElementById('cModal').classList.contains('open')) return;
+  const chk = buildCRow();
+  if (chk.section === 'plan' && !chk.month) {
+    setAutosave('error');
+    toast('⚠️ ใส่ "ประจำเดือน" ด้วย — ยังไม่บันทึกอัตโนมัติจนกว่าจะใส่เดือน', 'error', 3500);
+    return;
+  }
   try {
     await API.update('tasks', editId, buildCRow(), { silent: true });
     await API.saveLinks(editId, editLinks.filter(l => l.url.trim()), { silent: true });
@@ -1010,6 +1023,10 @@ async function saveC() {
   if (!cTopic.value.trim()) { toast('กรุณาใส่ชื่องาน/หัวข้อ', 'error'); return; }
   clearTimeout(autosaveTimer);
   const row = buildCRow();
+  if (row.section === 'plan' && !row.month) {
+    toast('⚠️ กรุณาเลือก "ประจำเดือน" ก่อนบันทึก ไม่งั้นงานจะไม่แสดงในตาราง', 'error', 4500);
+    return;
+  }
   if (row.section === 'plan' && row.planStatus === 'เสร็จสิ้น' && !row.postDate) {
     toast('ใส่ "วันที่โพสต์จริง" ด้วย เพื่อให้งานไปแสดงในสัปดาห์ที่ถูกต้อง', 'error', 4000);
     return;
@@ -1344,3 +1361,13 @@ async function delCal() {
     await refresh();
   } catch (e) { toast(e.message, 'error'); }
 }
+
+/* รันลำดับแผนใหม่เมื่อเปลี่ยนคนหรือเดือน (เฉพาะตอนเพิ่มงานใหม่) */
+document.addEventListener('DOMContentLoaded', () => {
+  ['cMember', 'cMonth'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', () => {
+      if (!editId && cSection.value === 'plan') cOrder.value = nextPlanOrder(cMember.value, cMonth.value);
+    });
+  });
+});
