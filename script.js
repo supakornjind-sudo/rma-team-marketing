@@ -1094,12 +1094,14 @@ function activeThumbsEl() {
   if (document.getElementById('cModal').classList.contains('open')) return ['cThumbs', 'task'];
   if (document.getElementById('pModal').classList.contains('open')) return ['pThumbs', 'prod'];
   if (document.getElementById('jModal').classList.contains('open')) return ['jThumbs', 'proj'];
+  if (document.getElementById('kModal').classList.contains('open')) return ['kThumbs', 'calendar'];
   return null;
 }
 function addImgFiles(files) {
   const a = activeThumbsEl(); if (!a) return;
+  const rid = a[1] === 'calendar' ? calEditId : editId;
   [...files].forEach(f => { if (f && f.type.startsWith('image/'))
-    compressImage(f, d => { pendingImgs.push(d); renderThumbs(a[0], a[1], editId); }); });
+    compressImage(f, d => { pendingImgs.push(d); renderThumbs(a[0], a[1], rid); }); });
 }
 document.addEventListener('paste', e => {
   const items = (e.clipboardData && e.clipboardData.items) ? [...e.clipboardData.items] : [];
@@ -1139,7 +1141,7 @@ async function addAttachFiles(files) {
 }
 document.addEventListener('DOMContentLoaded', () => {
   // โซนรูปภาพ
-  [['pasteZone','imgInput'],['pasteZoneP','imgInputP'],['pasteZoneJ','imgInputJ']].forEach(([z, f]) => {
+  [['pasteZone','imgInput'],['pasteZoneP','imgInputP'],['pasteZoneJ','imgInputJ'],['pasteZoneK','imgInputK']].forEach(([z, f]) => {
     const zone = document.getElementById(z), file = document.getElementById(f);
     zone.addEventListener('click', () => file.click());
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
@@ -1314,6 +1316,8 @@ function renderCalendar() {
         <strong>${esc(e.title)}</strong>
         <span style="color:#7a8aa0;">${fmtDate(e.start)}${e.end && e.end !== e.start ? ' – ' + fmtDate(e.end) : ''}</span>
         ${e.note ? `<span style="color:#8fa1b5;font-size:12px;">📝 ${esc(e.note)}</span>` : ''}
+        ${linksOf(e.id).map(l => `<a href="${esc(l.url)}" target="_blank" onclick="event.stopPropagation()" style="font-size:12px;color:#2c5d9e;">🔗 ${esc(l.channel || 'ลิงก์')}</a>`).join('')}
+        ${imagesOf('calendar', e.id).length ? `<span style="font-size:12px;color:#7a8aa0;">📷 ${imagesOf('calendar', e.id).length} รูป</span>` : ''}
         <span style="margin-left:auto;color:#c3cfdc;font-size:11px;">โดย ${esc(e.createdBy || '')}</span>
       </div>`).join('') : '<div style="color:#7a8aa0;font-size:13px;margin-top:8px;">ยังไม่มีกิจกรรม — กด ➕ เพิ่มได้เลย ทุกคนในทีมจะเห็นเหมือนกัน</div>'}
     </div>`;
@@ -1328,10 +1332,26 @@ function openCalModal(id, dateISO) {
   document.getElementById('kNote').value = e ? (e.note || '') : '';
   window.kColor = e ? (e.color || CAL_COLORS[0]) : CAL_COLORS[0];
   renderKSwatches();
+  // ลิงก์ + รูปของกิจกรรม (ใช้ระบบเดียวกับงานปกติ — Google Drive)
+  pendingImgs = [];
+  kLinks = id ? linksOf(id).map(l => ({ ...l })) : [];
+  renderKLinkRows();
+  renderThumbs('kThumbs', 'calendar', calEditId);
   document.getElementById('kDelBtn').style.display = id ? '' : 'none';
   document.getElementById('kTitleHead').textContent = id ? '✏️ แก้ไขกิจกรรม' : '➕ เพิ่มกิจกรรม/วันสำคัญ';
   openM('kModal');
 }
+/* ---------- ลิงก์ของกิจกรรมปฏิทิน ---------- */
+let kLinks = [];
+function renderKLinkRows() {
+  document.getElementById('kLinkRows').innerHTML = kLinks.map((l, i) => `
+    <div style="display:flex;gap:6px;margin-top:6px;">
+      <input type="text" style="width:130px;flex:none;" placeholder="ชื่อลิงก์ เช่น แผนที่" value="${esc(l.channel || '')}" oninput="kLinks[${i}].channel=this.value">
+      <input type="url" style="flex:1;" placeholder="วางลิงก์ https://..." value="${esc(l.url || '')}" oninput="kLinks[${i}].url=this.value">
+      <button class="del-btn" onclick="kLinks.splice(${i},1);renderKLinkRows()">🗑️</button>
+    </div>`).join('');
+}
+function addKLinkRow() { kLinks.push({ channel: '', url: '', likes: '', shares: '' }); renderKLinkRows(); }
 function renderKSwatches() {
   document.getElementById('kSwatches').innerHTML = CAL_COLORS.map(c =>
     `<span class="cal-swatch ${window.kColor === c ? 'on' : ''}" style="background:${c}" onclick="window.kColor='${c}';renderKSwatches()"></span>`).join('');
@@ -1345,8 +1365,11 @@ async function saveCal() {
   if (end < start) { const t = start; start = end; end = t; }   // สลับให้อัตโนมัติ
   const row = { title: title, start: start, end: end, color: window.kColor, note: document.getElementById('kNote').value.trim() };
   try {
+    let evId = calEditId;
     if (calEditId) await API.update('calendar', calEditId, row);
-    else await API.create('calendar', row);
+    else { const res = await API.create('calendar', row); evId = res.id; }
+    await API.saveLinks(evId, kLinks.filter(l => (l.url || '').trim()), { silent: true });
+    await uploadPending('calendar', evId);
     closeM('kModal');
     toast('บันทึกกิจกรรมแล้ว ✓ ทุกคนในทีมเห็นทันที', 'success');
     await refresh();

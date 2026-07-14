@@ -285,7 +285,7 @@
 </div></div>
 
 <!-- ===== CALENDAR MODAL ===== -->
-<div class="modal-bg" id="kModal"><div class="modal" style="max-width:460px;">
+<div class="modal-bg" id="kModal"><div class="modal" style="max-width:560px;">
   <h3 id="kTitleHead">➕ เพิ่มกิจกรรม/วันสำคัญ</h3>
   <div class="form-grid" style="margin-top:10px;">
     <div class="full"><label>ชื่อกิจกรรม / วันสำคัญ</label><input type="text" id="kTitle" placeholder="เช่น ออกบูธ Central Westgate / วันแม่"></div>
@@ -293,6 +293,13 @@
     <div><label>ถึงวันที่</label><input type="date" id="kEnd"></div>
     <div class="full"><label>สี</label><div id="kSwatches" class="chips"></div></div>
     <div class="full"><label>โน้ต / ต้องลงงานอะไรบ้าง</label><input type="text" id="kNote" placeholder="เช่น เตรียม Ads ล่วงหน้า 7 วัน + Live วันแรก"></div>
+    <div class="full"><label>🔗 ลิงก์ที่เกี่ยวข้อง (ไม่จำกัดจำนวน)</label>
+      <div id="kLinkRows"></div>
+      <button class="btn small gray" onclick="addKLinkRow()">➕ เพิ่มลิงก์</button></div>
+    <div class="full"><label>🖼️ รูปภาพ (เก็บใน Google Drive)</label>
+      <div class="paste-zone" id="pasteZoneK">📸 แปะรูป (Ctrl+V) / คลิกเลือกไฟล์</div>
+      <input type="file" id="imgInputK" accept="image/*" multiple hidden>
+      <div class="thumbs" id="kThumbs"></div></div>
   </div>
   <div class="modal-actions">
     <button class="btn red" id="kDelBtn" onclick="delCal()">🗑️ ลบ</button>
