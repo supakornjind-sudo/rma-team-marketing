@@ -19,6 +19,7 @@
   <button class="nav-btn" data-view="review" onclick="showView('review')">🔍 ตรวจงาน</button>
   <button class="nav-btn" data-view="projects" onclick="showView('projects')">🏗️ โปรเจกต์</button>
   <button class="nav-btn" data-view="calendar" onclick="showView('calendar')">📅 ปฏิทิน</button>
+  <button class="nav-btn" data-view="thaiholiday" onclick="showView('thaiholiday');initThaiHoliday()">🎉 Thai Holiday</button>
   <select id="personJump" onchange="if(this.value)openPerson(this.value)" style="border-radius:20px;">
     <option value="">📋 ตารางงานรายคน...</option>
   </select>
@@ -125,6 +126,9 @@
 
 <!-- ===== CALENDAR (หน้าใหม่ — ไม่แตะระบบเดิม) ===== -->
 <div class="view" id="view-calendar"><div id="calBody"></div></div>
+
+<!-- ===== THAI HOLIDAY (โมดูลแยก อ่านอย่างเดียว — ไม่เกี่ยวกับปฏิทินทีม) ===== -->
+<div class="view" id="view-thaiholiday"><div id="thaiHolidayBody"></div></div>
 
 <!-- ===== PERSON ===== -->
 <div class="view" id="view-person">
@@ -314,5 +318,6 @@
 <script src="utils.js"></script>
 <script src="api.js"></script>
 <script src="script.js"></script>
+<script src="thai-holidays.js"></script>
 </body>
 </html>
